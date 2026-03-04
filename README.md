@@ -77,3 +77,12 @@ The main analytical workflow is:
 6. Generate figures and maps  
 
 Scripts are organised so that figures can be reproduced directly from the processed datasets.
+
+
+## Setup
+
+To reproduce the analysis environment (in case libraries change), run:
+
+```r
+install.packages("renv")
+renv::restore()
