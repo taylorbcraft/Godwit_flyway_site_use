@@ -31,12 +31,12 @@ figures/
 data/
   derived data objects used in the analysis (RDS files)
 
-A separate folder within the scripts, figures, and data folders (last_2_years/) is available for running similar analyses on the 2 most recent years of tracking data.
-
 ```
 ---
 
 ## Important note on data
+
+A separate folder within the scripts, figures, and data folders (last_2_years/) is available for running similar analyses on the 2 most recent years of tracking data.
 
 Raw tracking data are not included in this repository.
 
