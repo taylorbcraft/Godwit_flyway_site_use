@@ -46,38 +46,6 @@ All analyses in the repository rely on derived datasets stored as `.rds` files, 
 
 ---
 
-## Main analysis outputs
-
-The analysis produces several key outputs:
-
-- Peak 14-day use windows for each nonbreeding site
-- Proportional site use by tracked birds in each migratory cycle
-- Seasonal site-use profiles across the nonbreeding period
-- Flyway maps showing core sites and representative migration routes
-
-Figures produced by the repository include:
-
-- flyway overview maps  
-- tagging site locations  
-- seasonal ridgeline plots of site use  
-- interannual trends in proportional site use  
-
----
-
-## Workflow
-
-The main analytical workflow is:
-
-1. Clean and filter tracking data  
-2. Identify site clusters using spatial clustering  
-3. Calculate daily presence of birds at each site  
-4. Estimate peak seasonal use windows  
-5. Calculate proportional site use across years  
-6. Generate figures and maps  
-
-Scripts are organised so that figures can be reproduced directly from the processed datasets.
-
-
 ## Setup
 
 To reproduce the analysis environment (in case libraries change), run:
