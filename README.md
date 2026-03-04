@@ -1,6 +1,6 @@
 # Godwit flyway site use
 
-Analysis scripts for quantifying nonbreeding site use of tracked **Black-tailed Godwits (*Limosa limosa*)** across the East Atlantic flyway.
+Analysis scripts for quantifying nonbreeding site use of tracked Black-tailed Godwits (*Limosa limosa*) across the East Atlantic flyway.
 
 This repository contains the code used to identify major nonbreeding and stopover sites from GPS tracking data and to quantify seasonal patterns of site use across the flyway.
 
@@ -10,10 +10,10 @@ This repository contains the code used to identify major nonbreeding and stopove
 
 This project uses tracking data from individually tagged godwits to:
 
-- identify clusters of frequently used **nonbreeding and stopover sites**
-- estimate **peak seasonal use periods** at each site
-- calculate the **proportion of tracked birds using each site**
-- visualise **seasonal site-use patterns** and flyway connectivity
+- identify clusters of frequently used nonbreeding and stopover sites
+- estimate peak seasonal use periods at each site
+- calculate the proportion of tracked birds using each site
+- visualise seasonal site-use patterns and flyway connectivity
 
 The analysis summarises how tracked birds use key sites across multiple migratory cycles and highlights periods of concentrated site use.
 
@@ -39,11 +39,11 @@ A separate folder (last_2_years/) is available for running similar analsyes on t
 
 ## Important note on data
 
-Raw tracking data are **not included** in this repository.
+Raw tracking data are not included in this repository.
 
 The original dataset (`all_locations.csv`) is excluded due to file size and data ownership restrictions.
 
-All analyses in the repository rely on **derived datasets stored as `.rds` files**, which contain processed summaries used for figure generation and analysis.
+All analyses in the repository rely on derived datasets stored as `.rds` files, which contain processed summaries used for figure generation and analysis.
 
 ---
 
@@ -51,10 +51,10 @@ All analyses in the repository rely on **derived datasets stored as `.rds` files
 
 The analysis produces several key outputs:
 
-- **Peak 14-day use windows** for each nonbreeding site
-- **Proportional site use** by tracked birds in each migratory cycle
-- Seasonal **site-use profiles** across the nonbreeding period
-- Flyway maps showing **core sites and representative migration routes**
+- Peak 14-day use windows for each nonbreeding site
+- Proportional site use by tracked birds in each migratory cycle
+- Seasonal site-use profiles across the nonbreeding period
+- Flyway maps showing core sites and representative migration routes
 
 Figures produced by the repository include:
 
