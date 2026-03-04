@@ -48,7 +48,7 @@ All analyses in the repository rely on derived datasets stored as `.rds` files, 
 
 ## Setup
 
-To reproduce the analysis environment (in case libraries change), run:
+To reproduce the analysis environment (in case libraries update), run:
 
 ```r
 install.packages("renv")
