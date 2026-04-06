@@ -63,7 +63,7 @@ Main outputs include:
 
 `3_plot_tagging_effort.R` plots annual tagging effort, including new deployments and active tags.
 
-`4._plot_tagging_site_map.R` creates a map of tagging locations.
+`4_plot_tagging_site_map.R` creates a map of tagging locations.
 
 `5_plot_example_migration_map.R` creates a flyway map with example migration routes from representative individuals.
 
