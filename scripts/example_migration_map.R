@@ -14,6 +14,8 @@
 #   5) convert locations into migration routes
 #   6) plot routes on an orthographic flyway map
 #
+# Input
+#   - data/all_locations.csv: raw tracking data
 # Output
 #   - figures/example_migration_map.pdf
 # =============================================================================

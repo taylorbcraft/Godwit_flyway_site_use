@@ -62,7 +62,7 @@ flyway <- ggplot() +
     data = world_o,
     fill = "grey90",
     colour = "white",
-    linewidth = 0.2
+    linewidth = 0.1
   ) +
   # graticule
   geom_sf(
@@ -96,8 +96,10 @@ flyway <- ggplot() +
     label.size = 0.15,
     label.r = unit(0.5, "lines"),
     size = 3,
-    force = 3,
-    seed = 1
+    force = 10,
+    force_pull = 0.1,
+    max.time = 2,
+    seed = 2
   ) +
   coord_sf(
     xlim = xlim_use,

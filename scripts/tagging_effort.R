@@ -1,4 +1,15 @@
-data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
+# ------------------------------------------------------------
+# Tagging effort over time
+#
+# Purpose: Summarize annual tagging effort and create a figure
+#          showing new deployments and active tags per year
+#
+# Input:
+#   - data/all_locations.csv
+#
+# Output:
+#   - figures/tag_effort.pdf
+# ------------------------------------------------------------
 
 # packages
 library(dplyr)
@@ -6,33 +17,95 @@ library(lubridate)
 library(ggplot2)
 library(forcats)
 library(scales)
+library(tidyr)
+
+# -------------------------------
+# read input
+# -------------------------------
+data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
 
 # ------------------------------------------------------------
-# data: tagging effort by year
+# data: deployments (new tags) by year
 # ------------------------------------------------------------
-tag_effort_year <- data_raw %>%
+deployments_year <- data_raw %>%
   mutate(
     deploy_on_date = ymd(deploy_on_timestamp, quiet = TRUE),
     deploy_year = year(deploy_on_date)
   ) %>%
   filter(!is.na(deploy_year)) %>%
-  filter(deploy_year >= 2010, deploy_year <= year(Sys.Date())) %>%
   distinct(individual_local_identifier, deploy_year) %>%
-  count(deploy_year, name = "n_tagged") %>%
-  arrange(deploy_year)
+  count(deploy_year, name = "n_new_deployments")
 
 # ------------------------------------------------------------
-# plot: infographic aesthetic
+# data: active tags by year
+# definition: individual has >=1 location in that calendar year
 # ------------------------------------------------------------
-p_tag_effort <- ggplot(tag_effort_year, aes(x = n_tagged, y = fct_rev(factor(deploy_year)))) +
-  geom_col(width = 0.72, fill = "#62C7D6", colour = NA) +
-  geom_text(aes(label = comma(n_tagged)), hjust = -0.15, size = 3.4, colour = "grey20") +
-  scale_x_continuous(labels = comma, expand = expansion(mult = c(0, 0.18))) +
+active_year <- data_raw %>%
+  mutate(
+    ts = ymd_hms(timestamp, quiet = TRUE)
+  ) %>%
+  filter(!is.na(ts)) %>%
+  mutate(year = year(ts)) %>%
+  distinct(individual_local_identifier, year) %>%
+  count(year, name = "n_active_tags") %>%
+  rename(deploy_year = year)
+
+# ------------------------------------------------------------
+# combine and reshape for side-by-side bars
+# ------------------------------------------------------------
+year_min <- 2010
+year_max <- 2025
+
+tag_effort_year <- full_join(deployments_year, active_year, by = "deploy_year") %>%
+  filter(deploy_year >= year_min, deploy_year <= year_max) %>%
+  mutate(
+    n_new_deployments = coalesce(n_new_deployments, 0L),
+    n_active_tags = coalesce(n_active_tags, 0L)
+  ) %>%
+  arrange(deploy_year) %>%
+  pivot_longer(
+    cols = c(n_new_deployments, n_active_tags),
+    names_to = "metric",
+    values_to = "n"
+  ) %>%
+  mutate(
+    metric = recode(
+      metric,
+      n_new_deployments = "New deployments",
+      n_active_tags = "Active tags"
+    ),
+    year_f = fct_rev(factor(deploy_year))
+  )
+
+# ------------------------------------------------------------
+# plot: infographic aesthetic, side-by-side bars
+# ------------------------------------------------------------
+fill_cols <- c(
+  "New deployments" = "#62C7D6",
+  "Active tags" = "#6F9CB5"
+)
+
+p_tag_effort <- ggplot(tag_effort_year, aes(x = n, y = year_f, fill = metric)) +
+  geom_col(
+    width = 0.72,
+    position = position_dodge(width = 0.78),
+    colour = NA
+  ) +
+  geom_text(
+    aes(label = ifelse(n > 0, comma(n), "")),
+    position = position_dodge(width = 0.78),
+    hjust = -0.15,
+    size = 3.2,
+    colour = "grey20"
+  ) +
+  scale_fill_manual(values = fill_cols) +
+  scale_x_continuous(labels = comma, expand = expansion(mult = c(0, 0.22))) +
   labs(
     title = "TAGGING EFFORT OVER TIME",
-    subtitle = "Number of newly tagged individuals per year",
+    subtitle = "New deployments vs. number of active tags per year",
     x = NULL,
-    y = NULL
+    y = NULL,
+    fill = NULL
   ) +
   theme_void(base_size = 12) +
   theme(
@@ -41,7 +114,8 @@ p_tag_effort <- ggplot(tag_effort_year, aes(x = n_tagged, y = fct_rev(factor(dep
     axis.text.y = element_text(size = 11, colour = "grey25"),
     plot.caption = element_text(size = 9, colour = "grey45", hjust = 0, margin = margin(t = 10)),
     plot.margin = margin(18, 18, 18, 18),
-    legend.position = "none"
+    legend.position = "top",
+    legend.text = element_text(size = 10, colour = "grey25")
   )
 
 p_tag_effort
@@ -49,4 +123,4 @@ p_tag_effort
 ggsave(p_tag_effort,
        file = "figures/tag_effort.pdf",
        width = 6,
-       height = 3.5)
+       height = 6)
