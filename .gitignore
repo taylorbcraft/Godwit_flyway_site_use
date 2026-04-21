@@ -4,6 +4,10 @@
 .Ruserdata
 .DS_Store
 ~$*
-data/all_locations.csv
 all_locations.csv
 documents/
+
+# Data are stored outside GitHub, e.g. Zenodo.
+data/**
+!data/
+!data/README.md
