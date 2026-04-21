@@ -7,7 +7,7 @@
 #     - the west africa basemap with site-assigned tracking fixes overlaid
 #
 # inputs
-#   - data/loc_sf.rds: site-assigned tracking fixes (sf), must include site_name
+#   - data/site_location_fixes.rds: site-assigned tracking fixes (sf), must include site_name
 #
 # outputs
 #   - figures/iberia_infographic.pdf
@@ -23,7 +23,7 @@ library(rnaturalearth)
 # -------------------------------
 # read inputs
 # -------------------------------
-loc_sf <- readRDS("data/loc_sf.rds")
+site_location_fixes <- readRDS("data/site_location_fixes.rds")
 
 # basemap
 world <- ne_countries(scale = 50, returnclass = "sf")
@@ -37,11 +37,11 @@ iberia <- world %>%
   filter(admin %in% c("Spain", "Portugal"))
 
 iberia_poly <- iberia %>%
-  st_transform(st_crs(loc_sf)) %>%
+  st_transform(st_crs(site_location_fixes)) %>%
   st_union() %>%
   st_make_valid()
 
-points_sf_iberia <- loc_sf %>%
+points_sf_iberia <- site_location_fixes %>%
   st_filter(iberia_poly, .predicate = st_within)
 
 # plot
@@ -103,11 +103,11 @@ wafrica <- world %>%
   ))
 
 wafrica_poly <- wafrica %>%
-  st_transform(st_crs(loc_sf)) %>%
+  st_transform(st_crs(site_location_fixes)) %>%
   st_union() %>%
   st_make_valid()
 
-points_sf_wafrica <- loc_sf %>%
+points_sf_wafrica <- site_location_fixes %>%
   st_filter(wafrica_poly, .predicate = st_within)
 
 p_wafrica <- ggplot() +

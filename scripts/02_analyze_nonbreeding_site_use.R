@@ -79,11 +79,15 @@ library(slider)
 # -------------------------------
 # 1) read and clean tracking data
 # -------------------------------
-data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
+location_data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
 
-data_clean <- data_raw %>%
+clean_locations <- location_data_raw %>%
   mutate(
-    timestamp = ymd_hms(timestamp, tz = "UTC", quiet = TRUE),
+    timestamp = {
+      parsed_datetime <- ymd_hms(timestamp, tz = "UTC", quiet = TRUE)
+      parsed_date <- as.POSIXct(ymd(timestamp, quiet = TRUE), tz = "UTC")
+      coalesce(parsed_datetime, parsed_date)
+    },
     date = as.Date(timestamp),
     location_lat = Y,
     location_long = X,
@@ -113,36 +117,36 @@ data_clean <- data_raw %>%
 # ---------------------------------------
 # 2) assign locations to "sites" (dbscan)
 # ---------------------------------------
-loc_sf <- data_clean %>%
+site_location_fixes <- clean_locations %>%
   st_as_sf(coords = c("location_long", "location_lat"), crs = 4326, remove = FALSE) %>%
   st_transform(3857)
 
-coords <- st_coordinates(loc_sf) %>% as.matrix()
+coords <- st_coordinates(site_location_fixes) %>% as.matrix()
 
 grid_m <- 250
-coords_snap <- tibble(
+snapped_coords <- tibble(
   x = round(coords[, 1] / grid_m) * grid_m,
   y = round(coords[, 2] / grid_m) * grid_m
 )
 
-coords_snap_unique <- coords_snap %>%
+unique_snapped_coords <- snapped_coords %>%
   count(x, y, name = "n_pts")
 
-db_u <- dbscan(
-  coords_snap_unique %>% select(x, y) %>% as.matrix(),
+site_clusters <- dbscan(
+  unique_snapped_coords %>% select(x, y) %>% as.matrix(),
   eps = 30000,
   minPts = 1500
 )
 
-coords_snap_unique <- coords_snap_unique %>%
-  mutate(site_id = db_u$cluster)
+unique_snapped_coords <- unique_snapped_coords %>%
+  mutate(site_id = site_clusters$cluster)
 
-loc_sf <- loc_sf %>%
+site_location_fixes <- site_location_fixes %>%
   mutate(
-    site_id = coords_snap_unique$site_id[
+    site_id = unique_snapped_coords$site_id[
       match(
-        paste(coords_snap$x, coords_snap$y),
-        paste(coords_snap_unique$x, coords_snap_unique$y)
+        paste(snapped_coords$x, snapped_coords$y),
+        paste(unique_snapped_coords$x, unique_snapped_coords$y)
       )
     ]
   ) %>%
@@ -152,7 +156,7 @@ loc_sf <- loc_sf %>%
 # 2b) assign site names
 #     using nearest reference point
 # ---------------------------------------
-site_ref_sf <- tribble(
+site_reference_points <- tribble(
   ~site_name,                        ~ref_lat, ~ref_long,
   "Ebro Delta",                        40.7,     0.777,
   "Extremadura",                       39.1,    -5.93,
@@ -172,7 +176,7 @@ site_ref_sf <- tribble(
   st_transform(3857)
 
 # one point per dbscan site (median fix coordinates)
-site_sf <- loc_sf %>%
+site_locations <- site_location_fixes %>%
   st_transform(4326) %>%
   st_drop_geometry() %>%
   group_by(site_id) %>%
@@ -184,32 +188,43 @@ site_sf <- loc_sf %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326, remove = FALSE) %>%
   st_transform(3857) %>%
   # nearest reference-name join
-  st_join(site_ref_sf %>% select(site_name), join = st_nearest_feature) %>%
+  st_join(site_reference_points %>% select(site_name), join = st_nearest_feature) %>%
   mutate(site_name = if_else(is.na(site_name), paste0("site_", site_id), site_name)) %>%
   # optional distance diagnostic (km) in one line
   mutate(
-    match_dist_km = as.numeric(st_distance(geometry, st_geometry(site_ref_sf)[st_nearest_feature(., site_ref_sf)], by_element = TRUE)) / 1000
+    match_dist_km = as.numeric(st_distance(geometry, st_geometry(site_reference_points)[st_nearest_feature(., site_reference_points)], by_element = TRUE)) / 1000
   ) %>%
-  st_transform(4326)
+  st_transform(4326) %>%
+  group_by(site_name) %>%
+  mutate(
+    site_label = if (n() > 1L) paste0(site_name, " (site ", site_id, ")") else site_name
+  ) %>%
+  ungroup()
 
 # attach names back to fixes (single join)
-loc_sf <- loc_sf %>%
-  left_join(site_sf %>% st_drop_geometry() %>% select(site_id, site_name), by = "site_id")
+site_location_fixes <- site_location_fixes %>%
+  left_join(
+    site_locations %>% st_drop_geometry() %>% select(site_id, site_name, site_label),
+    by = "site_id"
+  )
 
 # quick view
-print(site_sf, n = 100)
-mapview::mapview(site_sf)
+print(site_locations, n = 100)
+
+if (interactive() && requireNamespace("mapview", quietly = TRUE)) {
+  mapview::mapview(site_locations)
+}
 
 # ------------------------------------------------------------
 # 3) define migratory cycle label (nonbreeding year)
 # ------------------------------------------------------------
 # note: keep the trough calculation for reference, but use a fixed anchor: june 1
-n_individuals_year <- data_clean %>%
+n_individuals_year <- clean_locations %>%
   mutate(year = year(date)) %>%
   group_by(year) %>%
   summarise(n_tracked = n_distinct(local_identifier), .groups = "drop")
 
-daily_occ <- data_clean %>%
+daily_occ <- clean_locations %>%
   mutate(
     year = year(date),
     doy = yday(date)
@@ -246,10 +261,10 @@ add_nb_year <- function(x, date_col = date) {
 # ---------------------------------------------
 # 4) reduce to unique presence-days per site/cycle
 # ---------------------------------------------
-presence_days <- loc_sf %>%
+site_presence_days <- site_location_fixes %>%
   add_nb_year(date) %>%
   st_drop_geometry() %>%
-  distinct(local_identifier, site_id, site_name, nb_year, nb_year_start, date, .keep_all = FALSE) %>%
+  distinct(local_identifier, site_id, site_name, site_label, nb_year, nb_year_start, date, .keep_all = FALSE) %>%
   mutate(day_in_year = as.integer(date - nb_year_start) + 1L) %>%
   filter(day_in_year >= 1L, day_in_year <= 366L)
 
@@ -269,38 +284,38 @@ fmt_mmdd <- function(day_in_year) {
 # for each site x nb_year x day_in_year:
 #   n_users(day) = number of distinct individuals present that day at that site
 # then rolling 14-day sum over n_users(day), pick max window
-site_peak_windows_by_year <- presence_days %>%
-  group_by(site_id, site_name, nb_year, day_in_year) %>%
+site_peak_windows_by_year <- site_presence_days %>%
+  group_by(site_id, site_name, site_label, nb_year, day_in_year) %>%
   summarise(n_users = n_distinct(local_identifier), .groups = "drop") %>%
-  group_by(site_id, site_name, nb_year) %>%
+  group_by(site_id, site_name, site_label, nb_year) %>%
   complete(day_in_year = 1:366, fill = list(n_users = 0)) %>%
   arrange(day_in_year) %>%
   mutate(roll_14 = slide_dbl(n_users, sum, .before = 13, .complete = TRUE)) %>%
   slice_max(roll_14, n = 1, with_ties = FALSE) %>%
   transmute(
-    site_id, site_name, nb_year,
+    site_id, site_name, site_label, nb_year,
     peak_end_day = day_in_year,
     peak_start_day = wrap_day(day_in_year - 13L),
     peak_n_users_14d = roll_14,
-    peak_window = paste0(fmt_mmdd(wrap_day(day_in_year - 13L)), "–", fmt_mmdd(day_in_year))
+    peak_window = paste0(fmt_mmdd(wrap_day(day_in_year - 13L)), " - ", fmt_mmdd(day_in_year))
   ) %>%
   ungroup()
 
 # ------------------------------------------------------------
 # 6) proportional use per site per cycle, then average over years
 # ------------------------------------------------------------
-n_total_by_year <- presence_days %>%
+tracked_birds_by_year <- site_presence_days %>%
   distinct(nb_year, local_identifier) %>%
   count(nb_year, name = "n_total")
 
-site_prop_by_year <- presence_days %>%
-  distinct(site_id, site_name, nb_year, local_identifier) %>%
-  count(site_id, site_name, nb_year, name = "n_site") %>%
-  left_join(n_total_by_year, by = "nb_year") %>%
+site_use_by_year <- site_presence_days %>%
+  distinct(site_id, site_name, site_label, nb_year, local_identifier) %>%
+  count(site_id, site_name, site_label, nb_year, name = "n_site") %>%
+  left_join(tracked_birds_by_year, by = "nb_year") %>%
   mutate(prop_site = n_site / n_total)
 
-site_prop_summary <- site_prop_by_year %>%
-  group_by(site_id, site_name) %>%
+site_use_summary <- site_use_by_year %>%
+  group_by(site_id, site_name, site_label) %>%
   summarise(
     prop_mean = mean(prop_site, na.rm = TRUE),
     prop_median = median(prop_site, na.rm = TRUE),
@@ -311,42 +326,42 @@ site_prop_summary <- site_prop_by_year %>%
 # ------------------------------------------------------------
 # 7) single per-site peak window summary (no n_cycles)
 # ------------------------------------------------------------
-site_peak_summary <- site_peak_windows_by_year %>%
-  group_by(site_id, site_name, peak_window) %>%
+site_peak_window_summary <- site_peak_windows_by_year %>%
+  group_by(site_id, site_name, site_label, peak_window) %>%
   summarise(
     mean_peak_n_users_14d = mean(peak_n_users_14d, na.rm = TRUE),
     n_occurrences = n(),
     .groups = "drop"
   ) %>%
-  group_by(site_id, site_name) %>%
+  group_by(site_id, site_name, site_label) %>%
   arrange(desc(n_occurrences), desc(mean_peak_n_users_14d), .by_group = TRUE) %>%
   slice_head(n = 1) %>%
   ungroup() %>%
-  select(site_id, site_name, peak_window, mean_peak_n_users_14d)
+  select(site_id, site_name, site_label, peak_window, mean_peak_n_users_14d)
 
 # ------------------------------------------------------------
 # 8) final per-site table
 # ------------------------------------------------------------
-site_summary <- site_prop_summary %>%
-  left_join(site_peak_summary, by = c("site_id", "site_name")) %>%
+site_summary_points <- site_use_summary %>%
+  left_join(site_peak_window_summary, by = c("site_id", "site_name", "site_label")) %>%
   select(
-    site_id, site_name,
+    site_id, site_name, site_label,
     prop_mean, prop_median,
     peak_window, mean_peak_n_users_14d
   ) %>%
   arrange(desc(prop_mean))
 
-site_summary <- site_summary %>%
+site_summary_points <- site_summary_points %>%
   left_join(
-    site_sf %>% select(-match_dist_km),
-    by = c("site_id", "site_name")
+    site_locations %>% select(-match_dist_km),
+    by = c("site_id", "site_name", "site_label")
   ) %>%
   st_as_sf()
 
 
 # save outputs
 saveRDS(site_peak_windows_by_year, "data/site_peak_windows_by_year.rds")
-saveRDS(site_prop_by_year, "data/site_prop_by_year.rds")
-saveRDS(site_summary, "data/site_summary.rds")
-saveRDS(presence_days, "data/presence_days.rds")
-saveRDS(loc_sf, "data/loc_sf.rds")
+saveRDS(site_use_by_year, "data/site_use_by_year.rds")
+saveRDS(site_summary_points, "data/site_summary_points.rds")
+saveRDS(site_presence_days, "data/site_presence_days.rds")
+saveRDS(site_location_fixes, "data/site_location_fixes.rds")

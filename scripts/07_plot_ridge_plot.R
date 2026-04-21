@@ -7,8 +7,8 @@
 #   birds present, averaged across years.
 #
 # Inputs
-#   - data/site_summary.rds: site locations (used for ordering sites north to south)
-#   - data/presence_days.rds: daily bird presence at sites (one row per bird × site × day)
+#   - data/site_summary_points.rds: site locations (used for ordering sites north to south)
+#   - data/site_presence_days.rds: daily bird presence at sites (one row per bird × site × day)
 #
 # Output
 #   - figures/ridge_plot.pdf
@@ -25,8 +25,8 @@ library(sf)
 # -------------------------------
 # read inputs
 # -------------------------------
-site_summary <- readRDS("data/site_summary.rds")
-presence_days <- readRDS("data/presence_days.rds")
+site_summary_points <- readRDS("data/site_summary_points.rds")
+site_presence_days <- readRDS("data/site_presence_days.rds")
 
 
 # ------------------------------------------------------------
@@ -34,35 +34,35 @@ presence_days <- readRDS("data/presence_days.rds")
 # ------------------------------------------------------------
 
 # number of tracked birds per cycle (denominator)
-denom_year <- presence_days %>%
+denom_year <- site_presence_days %>%
   distinct(nb_year, local_identifier) %>%
   count(nb_year, name = "n_tracked")
 
 # birds present per site x day per cycle (numerator) and daily proportion
-site_day <- presence_days %>%
-  distinct(nb_year, site_id, site_name, day_in_year, local_identifier) %>%
-  count(nb_year, site_id, site_name, day_in_year, name = "n_present") %>%
+site_day <- site_presence_days %>%
+  distinct(nb_year, site_id, site_name, site_label, day_in_year, local_identifier) %>%
+  count(nb_year, site_id, site_name, site_label, day_in_year, name = "n_present") %>%
   left_join(denom_year, by = "nb_year") %>%
   mutate(prop_present = n_present / n_tracked)
 
 # average daily proportions across cycles
 site_day_mean <- site_day %>%
-  group_by(site_id, site_name, day_in_year) %>%
+  group_by(site_id, site_name, site_label, day_in_year) %>%
   summarise(prop = mean(prop_present, na.rm = TRUE), .groups = "drop") %>%
-  group_by(site_id, site_name) %>%
+  group_by(site_id, site_name, site_label) %>%
   complete(day_in_year = 1:366, fill = list(prop = 0)) %>%
   ungroup()
 
 # order sites by latitude (north to south) for plotting
-site_order <- site_summary %>%
+site_order <- site_summary_points %>%
   st_drop_geometry() %>%
   arrange(desc(latitude)) %>%
-  pull(site_name)
+  pull(site_label)
 
 site_day_mean <- site_day_mean %>%
   mutate(
-    site_name = factor(site_name, levels = site_order),
-    site_name = fct_rev(site_name)
+    site_label = factor(site_label, levels = site_order),
+    site_label = fct_rev(site_label)
   )
 
 # ------------------------------------------------------------
@@ -74,9 +74,9 @@ month_breaks <- c(1, 31, 62, 92, 123, 153, 184, 215, 245, 276, 306, 337)
 month_labels <- c("Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
                   "Dec", "Jan", "Feb", "Mar", "Apr", "May")
 
-p_ridge <- ggplot(site_day_mean, aes(x = day_in_year, y = site_name, height = prop)) +
+p_ridge <- ggplot(site_day_mean, aes(x = day_in_year, y = site_label, height = prop)) +
   geom_ridgeline(
-    aes(fill = site_name),
+    aes(fill = site_label),
     stat = "identity",
     scale = 12,
     min_height = 0,

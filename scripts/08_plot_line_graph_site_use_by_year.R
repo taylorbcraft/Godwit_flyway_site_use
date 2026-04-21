@@ -7,10 +7,10 @@
 #   interannual changes in tagged-bird use.
 #
 # Input
-#   - data/site_prop_by_year.rds
+#   - data/site_use_by_year.rds
 #
 # Output
-#   - figures/site_prop_by_year.pdf
+#   - figures/site_use_by_year.pdf
 # =============================================================================
 
 # packages
@@ -21,33 +21,33 @@ library(scales)
 # -------------------------------
 # read input
 # -------------------------------
-site_prop_by_year <- readRDS("data/site_prop_by_year.rds")
+site_use_by_year <- readRDS("data/site_use_by_year.rds")
 
 # -------------------------------
 # order sites by overall mean use
 # -------------------------------
-site_order <- site_prop_by_year %>%
-  group_by(site_name) %>%
+site_order <- site_use_by_year %>%
+  group_by(site_label) %>%
   summarise(mean_prop = mean(prop_site, na.rm = TRUE), .groups = "drop") %>%
   arrange(desc(mean_prop)) %>%
-  pull(site_name)
+  pull(site_label)
 
-site_prop_by_year <- site_prop_by_year %>%
-  mutate(site_name = factor(site_name, levels = site_order))
+site_use_by_year <- site_use_by_year %>%
+  mutate(site_label = factor(site_label, levels = site_order))
 
 # -------------------------------
 # plot
 # -------------------------------
 x_breaks <- seq(
-  min(site_prop_by_year$nb_year, na.rm = TRUE),
-  max(site_prop_by_year$nb_year, na.rm = TRUE),
+  min(site_use_by_year$nb_year, na.rm = TRUE),
+  max(site_use_by_year$nb_year, na.rm = TRUE),
   by = 2
 )
 
-p <- ggplot(site_prop_by_year, aes(x = nb_year, y = prop_site, group = site_name)) +
+p <- ggplot(site_use_by_year, aes(x = nb_year, y = prop_site, group = site_label)) +
   geom_line() +
   geom_point(size = 1.8) +
-  facet_wrap(~ site_name, scales = "fixed", ncol = 2) +
+  facet_wrap(~ site_label, scales = "fixed", ncol = 2) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
   scale_x_continuous(breaks = x_breaks) +
   labs(
@@ -63,7 +63,7 @@ p <- ggplot(site_prop_by_year, aes(x = nb_year, y = prop_site, group = site_name
 print(p)
 
 ggsave(
-  filename = "figures/site_prop_by_year.pdf",
+  filename = "figures/site_use_by_year.pdf",
   plot = p,
   width = 6,
   height = 9,

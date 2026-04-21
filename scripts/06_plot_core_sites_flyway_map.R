@@ -6,8 +6,8 @@
 #   sites across the flyway, scaled by average proportional site use across years
 #
 # inputs
-#   - data/site_summary.rds: site points with summary metrics (e.g., prop_mean)
-#   - data/loc_sf.rds: site-assigned location fixes (sf)
+#   - data/site_summary_points.rds: site points with summary metrics (e.g., prop_mean)
+#   - data/site_location_fixes.rds: site-assigned location fixes (sf)
 #
 # outputs
 #   - figures/core_nonbreeding_sites_map.pdf
@@ -23,8 +23,8 @@ library(ggrepel)
 # -------------------------------
 # read inputs
 # -------------------------------
-site_summary <- readRDS("data/site_summary.rds")
-loc_sf <- readRDS("data/loc_sf.rds")
+site_summary_points <- readRDS("data/site_summary_points.rds")
+site_location_fixes <- readRDS("data/site_location_fixes.rds")
 
 # natural earth basemap
 world <- ne_countries(scale = 50, returnclass = "sf")
@@ -45,7 +45,7 @@ ortho_crs <- "+proj=ortho +lat_0=35 +lon_0=-10 +datum=WGS84 +units=m +no_defs"
 
 world_o <- st_transform(world, ortho_crs)
 grat_o <- st_transform(grat_ll, ortho_crs)
-sites_o <- st_transform(site_summary, ortho_crs)
+sites_o <- st_transform(site_summary_points, ortho_crs)
 
 # set plot bounds to the sites extent with padding
 bb <- st_bbox(sites_o)
@@ -86,7 +86,7 @@ flyway <- ggplot() +
     data = sites_o,
     aes(
       geometry = geometry,
-      label = sprintf("%s: %.0f%%", site_name, prop_mean * 100)
+      label = sprintf("%s: %.0f%%", site_label, prop_mean * 100)
     ),
     stat = "sf_coordinates",
     min.segment.length = 0,
@@ -112,7 +112,7 @@ flyway <- ggplot() +
     legend.position = "none",
     plot.title = element_text(size = 24, colour = "#6F9CB5", face = "plain")
   ) +
-  labs(title = "Core nonbreeding sites and\naverage site use (2013–2025)")
+  labs(title = "Core nonbreeding sites and\naverage site use (2013-2025)")
 
 print(flyway)
 

@@ -31,14 +31,20 @@ library(stringr)
 # ------------------------------------------------------------
 # 1) create 1 fix per bird per day (time window subset)
 # ------------------------------------------------------------
-data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
+location_data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
 
 
 t_min <- as.POSIXct("2021-06-01", tz = "UTC")
 t_max <- as.POSIXct("2022-06-01", tz = "UTC")
 
-data_1day <- data_raw %>%
-  mutate(timestamp = ymd_hms(timestamp, tz = "UTC", quiet = TRUE)) %>%
+data_1day <- location_data_raw %>%
+  mutate(
+    timestamp = {
+      parsed_datetime <- ymd_hms(timestamp, tz = "UTC", quiet = TRUE)
+      parsed_date <- as.POSIXct(ymd(timestamp, quiet = TRUE), tz = "UTC")
+      coalesce(parsed_datetime, parsed_date)
+    }
+  ) %>%
   filter(!is.na(X), !is.na(Y), !is.na(timestamp)) %>%
   filter(timestamp > t_min, timestamp < t_max) %>%
   mutate(date = as.Date(timestamp)) %>%

@@ -20,7 +20,7 @@ The main outputs are summary datasets and figures describing site importance, se
 ### Data import
 The required tracking data is not included in this repository due to size limitations.
 
-The script `scripts/1.import_location_data.R` downloads and combines tracking data from Movebank.
+The script `scripts/01_import_location_data.R` downloads and combines tracking data from Movebank.
 
 This step requires:
 
@@ -37,68 +37,86 @@ To restore the project library (in case packages update or change) with `renv`:
 `install.packages("renv")`  
 `renv::restore()`
 
-## Script order
+## Run the Workflow
+
+To reproduce the full workflow from `data/all_locations.csv`, run:
+
+`Rscript run_workflow.R`
+
+This runs the full-period analysis, full-period figures, recent two-year analysis, and recent two-year figures in order.
+
+The runner does not import data from Movebank. It assumes `data/all_locations.csv` already exists and has the required columns.
+
+When it starts, `run_workflow.R` prints the expected input file and the required column names.
+
+To refresh the Movebank data, run the import script separately:
+
+`Rscript scripts/01_import_location_data.R`
+
+This requires Movebank access, valid Movebank credentials, and the `move2` package.
+
+## Script Order
 
 The scripts are intended to be run in the following order.
 
 ### Data import
 
-`1_import_location_data.R` downloads tracking data and deployment metadata from Movebank, combines studies, and writes a unified location dataset.
+`01_import_location_data.R` downloads tracking data and deployment metadata from Movebank, combines studies, and writes a unified location dataset.
 
 Run this only if you want to refresh `data/all_locations.csv` from Movebank.
 
 ### Core analysis
 
-`2_analyze_nonbreeding_site_use.R` processes tracking data, identifies sites, calculates site-use metrics, and saves the derived `.rds` objects used by the plotting scripts.
+`02_analyze_nonbreeding_site_use.R` processes tracking data, identifies sites, calculates site-use metrics, and saves the derived `.rds` objects used by the plotting scripts.
 
 Main outputs include:
 
-- `data/loc_sf.rds`
-- `data/presence_days.rds`
+- `data/site_location_fixes.rds`
+- `data/site_presence_days.rds`
 - `data/site_peak_windows_by_year.rds`
-- `data/site_prop_by_year.rds`
-- `data/site_summary.rds`
+- `data/site_use_by_year.rds`
+- `data/site_summary_points.rds`
 
 ### Figure scripts
 
-`3_plot_tagging_effort.R` plots annual tagging effort, including new deployments and active tags.
+`03_plot_tagging_effort.R` plots annual tagging effort, including new deployments and active tags.
 
-`4_plot_tagging_site_map.R` creates a map of tagging locations.
+`04_plot_tagging_site_map.R` creates a map of tagging locations.
 
-`5_plot_example_migration_map.R` creates a flyway map with example migration routes from representative individuals.
+`05_plot_example_migration_map.R` creates a flyway map with example migration routes from representative individuals.
 
-`6_plot_core_sites_flyway_map.R` creates the main flyway map of core nonbreeding and stopover sites.
+`06_plot_core_sites_flyway_map.R` creates the main flyway map of core nonbreeding and stopover sites.
 
-`7_plot_ridge_plot.R` plots seasonal site-use profiles across the nonbreeding cycle.
+`07_plot_ridge_plot.R` plots seasonal site-use profiles across the nonbreeding cycle.
 
-`8_plot_line_graph_site_use_by_year.R` plots interannual variation in proportional site use for each site.
+`08_plot_line_graph_site_use_by_year.R` plots interannual variation in proportional site use for each site.
 
-`9_plot_regional_infographic.R` creates regional maps for Iberia and West Africa.
+`09_plot_regional_infographic.R` creates regional maps for Iberia and West Africa.
 
-## Minimal workflow
+## Manual Main Workflow
 
-If you want to reproduce the main outputs using the included files, run:
+If you want to run the main scripts manually instead of using `run_workflow.R`, run:
 
-1. `2_analyze_nonbreeding_site_use.R`
-2. `3_plot_tagging_effort.R`
-3. `4_plot_tagging_site_map.R`
-4. `5_plot_example_migration_map.R`
-5. `6_plot_core_sites_flyway_map.R`
-6. `7_plot_ridge_plot.R`
-7. `8_plot_line_graph_site_use_by_year.R`
-8. `9_plot_regional_infographic.R`
+1. `scripts/02_analyze_nonbreeding_site_use.R`
+2. `scripts/03_plot_tagging_effort.R`
+3. `scripts/04_plot_tagging_site_map.R`
+4. `scripts/05_plot_example_migration_map.R`
+5. `scripts/06_plot_core_sites_flyway_map.R`
+6. `scripts/07_plot_ridge_plot.R`
+7. `scripts/08_plot_line_graph_site_use_by_year.R`
+8. `scripts/09_plot_regional_infographic.R`
 
 If the derived `.rds` files are already present and up to date, the plotting scripts can also be run individually.
 
-## Last 2 years workflow
+## Recent Two-Year Workflow
 
 A parallel set of files is available under:
 
-- `data/last_2_years/`
-- `scripts/last_2_years/`
-- `figures/last_2_years/`
+- `data/recent_2_years/`
+- `scripts/recent_2_years/`
+- `figures/recent_2_years/`
 
-These are used for repeating a similar workflow restricted to the two most recent years of tracking data.
+These are used for repeating a similar workflow restricted to the two most recent nonbreeding cycles in the tracking data.
 
 ## Outputs
 ### Figures
@@ -115,4 +133,3 @@ Final figures written to `figures/`, including:
 
 ## Notes
 - The repository also contains report files in `documents/`.
-

@@ -22,12 +22,12 @@ library(tidyr)
 # -------------------------------
 # read input
 # -------------------------------
-data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
+location_data_raw <- read.csv("data/all_locations.csv", stringsAsFactors = FALSE)
 
 # ------------------------------------------------------------
 # data: deployments (new tags) by year
 # ------------------------------------------------------------
-deployments_year <- data_raw %>%
+deployments_year <- location_data_raw %>%
   mutate(
     deploy_on_date = ymd(deploy_on_timestamp, quiet = TRUE),
     deploy_year = year(deploy_on_date)
@@ -40,9 +40,13 @@ deployments_year <- data_raw %>%
 # data: active tags by year
 # definition: individual has >=1 location in that calendar year
 # ------------------------------------------------------------
-active_year <- data_raw %>%
+active_year <- location_data_raw %>%
   mutate(
-    ts = ymd_hms(timestamp, quiet = TRUE)
+    ts = {
+      parsed_datetime <- ymd_hms(timestamp, tz = "UTC", quiet = TRUE)
+      parsed_date <- as.POSIXct(ymd(timestamp, quiet = TRUE), tz = "UTC")
+      coalesce(parsed_datetime, parsed_date)
+    }
   ) %>%
   filter(!is.na(ts)) %>%
   mutate(year = year(ts)) %>%

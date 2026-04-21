@@ -145,4 +145,5 @@ events_joined$outlier <- ifelse(events_joined$lat.dev.to.roll > 10 | events_join
 events_joined_outliers_removed <- subset(events_joined, outlier == "normal")
 
 # export
-write.csv(events_joined_outliers_removed,'all_locations.csv', row.names = FALSE)
+dir.create("data", showWarnings = FALSE)
+write.csv(events_joined_outliers_removed, "data/all_locations.csv", row.names = FALSE)
