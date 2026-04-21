@@ -39,7 +39,7 @@ To restore the project library (in case packages update or change) with `renv`:
 
 ## Run the Workflow
 
-To reproduce the full workflow from `data/all_locations.csv`, run:
+To reproduce the full workflow, run:
 
 `Rscript run_workflow.R`
 
@@ -130,6 +130,3 @@ Final figures written to `figures/`, including:
 - seasonal ridge plot
 - annual site-use panels
 - Iberia and West Africa regional maps
-
-## Notes
-- The repository also contains report files in `documents/`.
